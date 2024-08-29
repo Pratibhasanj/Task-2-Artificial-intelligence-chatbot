@@ -1,94 +1,146 @@
-# Task-2-Artificial-intelligence-chatbot
+# Task-2-stock trading platform
 import java.util.*;
-import java.util.regex.*;
+import java.text.DecimalFormat;
 
-class Response
-{
-    private Pattern pattern;
-    private List<String> responses;
+class Stock {
+    String symbol;
+    double price;
 
-    public Response(String pattern, String... responses) 
-    {
-        this.pattern = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-        this.responses = Arrays.asList(responses);
-    }
-
-    public boolean matches(String input)
-    {
-        Matcher matcher = pattern.matcher(input);
-        return matcher.find();
-    }
-
-    public String getResponse() 
-    {
-        Random random = new Random();
-        return responses.get(random.nextInt(responses.size()));
+    public Stock(String symbol, double price) {
+        this.symbol = symbol;
+        this.price = price;
     }
 }
 
-class Chatbot
-{
-    private List<Response> responses;
+class Portfolio {
+    Map<String, Integer> holdings;
+    double cash;
 
-    public Chatbot()
+    public Portfolio(double initialCash)
     {
-        responses = new ArrayList<>();
-        responses.add(new Response("hi|hello|hey", 
-            "Hello!", "Hi there!", "Hey! How can I help you?"));
-        responses.add(new Response("how are you or u", 
-            "I'm doing well, thank you!", "I'm fine, how about you?"));
-        responses.add(new Response("what is your name","what's ur name", 
-            "My name is ChatBot.", "I'm ChatBot, nice to meet you!"));
-        responses.add(new Response("bye|goodbye", 
-            "Goodbye!", "See you later!", "Have a great day!"));
-        responses.add(new Response("weather", 
-            "I'm sorry, I don't have real-time weather information.", 
-            "You might want to check a weather app for accurate information."));
-        responses.add(new Response("joke", 
-            "Why don't scientists trust atoms? Because they make up everything!",
-            "What do you call a fake noodle? An impasta!"));
-        responses.add(new Response("thank you", 
-            "You're welcome!", "Glad I could help!", "My pleasure!"));
-        responses.add(new Response("ok","well,have a good day","is there anything I can do to help u further with"));
-        responses.add(new Response("what is java?","Java is a programming language which mainly follows object oriented "));
+        this.holdings = new HashMap<>();
+        this.cash = initialCash;
     }
 
-    public String generateResponse(String input)
-    {
-        for (Response response : responses) 
-        {
-            if (response.matches(input)) 
-            {
-                return response.getResponse();
-            }
+    public void buyStock(Stock stock, int quantity) {
+        double cost = stock.price * quantity;
+        if (cost > cash) {
+            System.out.println("Insufficient funds to complete purchase.");
+            return;
         }
-        return "I'm not sure how to respond to that. Can you try rephrasing?";
+        cash -= cost;
+        holdings.put(stock.symbol, holdings.getOrDefault(stock.symbol, 0) + quantity);
+        System.out.println("Bought " + quantity + " shares of " + stock.symbol);
+    }
+
+    public void sellStock(Stock stock, int quantity) {
+        if (!holdings.containsKey(stock.symbol) || holdings.get(stock.symbol) < quantity) {
+            System.out.println("Insufficient shares to complete sale.");
+            return;
+        }
+        cash += stock.price * quantity;
+        holdings.put(stock.symbol, holdings.get(stock.symbol) - quantity);
+        if (holdings.get(stock.symbol) == 0) {
+            holdings.remove(stock.symbol);
+        }
+        System.out.println("Sold " + quantity + " shares of " + stock.symbol);
+    }
+
+    public double getTotalValue(Map<String, Stock> market) {
+        double totalValue = cash;
+        for (Map.Entry<String, Integer> entry : holdings.entrySet()) {
+            totalValue += market.get(entry.getKey()).price * entry.getValue();
+        }
+        return totalValue;
+    }
+
+   public void displayPortfolio(Map<String, Stock> market) {
+        System.out.println("\nPortfolio:");
+        System.out.println("Cash: ₹" + new DecimalFormat("#,##0.00").format(cash));
+        for (Map.Entry<String, Integer> entry : holdings.entrySet()) {
+            String symbol = entry.getKey();
+            int quantity = entry.getValue();
+            double currentPrice = market.get(symbol).price;
+            double value = quantity * currentPrice;
+            System.out.println(symbol + ": " + quantity + " shares, Current Price: ₹" + 
+                               new DecimalFormat("#,##0.00").format(currentPrice) + 
+                               ", Total Value: ₹" + new DecimalFormat("#,##0.00").format(value));
+        }
+        System.out.println("Total Portfolio Value: ₹" + 
+                           new DecimalFormat("#,##0.00").format(getTotalValue(market)));
+    }
+}
+   
+class StockMarket {
+    Map<String, Stock> stocks;
+    Random random;
+
+    public StockMarket() {
+        this.stocks = new HashMap<>();
+        this.random = new Random();
+        initializeStocks();
+    }
+
+    private void initializeStocks() {
+       stocks.put("RELIANCE", new Stock("RELIANCE", 2500.0));
+        stocks.put("TCS", new Stock("TCS", 3500.0));
+        stocks.put("HDFC", new Stock("HDFC", 1500.0));
+        stocks.put("INFY", new Stock("INFY", 1700.0));
+    }
+
+    public void updatePrices() {
+        for (Stock stock : stocks.values()) {
+            double change = (random.nextDouble() - 0.5) * 0.1; 
+            stock.price *= (1 + change);
+        }
+    }
+
+    public void displayMarketData() {
+       System.out.println("\nCurrent Market Data:");
+        for (Stock stock : stocks.values()) {
+            System.out.println(stock.symbol + ": ₹" + new DecimalFormat("#,##0.00").format(stock.price));
+        }
     }
 }
 
-public class Task4
-{
+public class Task4 {
     public static void main(String[] args) {
-        Chatbot chatbot = new Chatbot();
+        StockMarket market = new StockMarket();
+        Portfolio portfolio = new Portfolio(100000.0);
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("Chatbot: Hello! How can I assist you today? (Type 'bye' to exit)");
+        while (true) {
+            market.updatePrices();
+            market.displayMarketData();
+            portfolio.displayPortfolio(market.stocks);
 
-        while (true) 
-        {
-            System.out.print("You: ");
-            String input = scanner.nextLine();
+            System.out.println("\nEnter command (buy/sell/quit):");
+            String command = scanner.nextLine().toLowerCase();
 
-            if (input.equalsIgnoreCase("bye")) 
-            {
-                System.out.println("Chatbot: " + chatbot.generateResponse(input));
+            if (command.equals("quit")) {
                 break;
-            }
+            } else if (command.equals("buy") || command.equals("sell")) {
+                System.out.println("Enter stock symbol:");
+                String symbol = scanner.nextLine().toUpperCase();
+                if (!market.stocks.containsKey(symbol)) {
+                    System.out.println("Invalid stock symbol.");
+                    continue;
+                }
 
-            String response = chatbot.generateResponse(input);
-            System.out.println("Chatbot: " + response);
+                System.out.println("Enter quantity:");
+                int quantity = Integer.parseInt(scanner.nextLine());
+
+                if (command.equals("buy")) {
+                    portfolio.buyStock(market.stocks.get(symbol), quantity);
+                } else {
+                    portfolio.sellStock(market.stocks.get(symbol), quantity);
+                }
+            } else {
+                System.out.println("Invalid command.");
+            }
         }
 
         scanner.close();
+        System.out.println("Thank you for using the Stock Trading Simulation!");
     }
 }
